@@ -1,0 +1,1047 @@
+---
+title: "Inventories"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# PS Paisagem Sustentaveis
+
+PS <- read.csv('D:/Lidar/Datos/00_Paisagem_Sustentaves_first.csv')
+PS$parcela<-paste(PS$location,PS$plotID,PS$sizeplot,PS$year,sep=" ")
+
+## AC  Embrapa Acre - Marcus V. D'Oliveira
+
+AC <- read.csv('D:/Lidar/Datos/00_Embrapa_Acre_Marcus_first.csv') ##No id tree.type...only trees??##
+AC$parcela<-paste(AC$location,AC$plotID,AC$sizeplot,AC$year,sep=" ")
+
+## INV Inventories already merged and names fixed
+INV<-read.csv('D:/Lidar/Datos/all_inventories_wd (1).csv')
+INV$parcela<-paste(INV$location,INV$plotID,INV$sizeplot,INV$year,sep=" ")
+INV<-INV[!INV$sizeplot=='?x500',]
+INV<-INV[!INV$sizeplot=='20x500',]
+
+
+
+```
+
+## Removed data {.tabset}
+
+### Total individuals in transects
+
+```{r,include=FALSE}
+INVagb<-read.csv('D:/Lidar/Datos/all_inventories_wd_agb.csv')
+t500<-nrow(INVagb[INVagb$sizeplot=='?x500',])
+t20<-nrow(INVagb[INVagb$sizeplot=='20x500',])
+INVagb<-INVagb[!INVagb$sizeplot=='?x500',]
+INVagb<-INVagb[!INVagb$sizeplot=='20x500',]
+
+```
+
+```{r,echo=FALSE}
+data.frame(T500x20=t20,T500xX=t500)
+```
+
+### Total dead individuals
+
+```{r, include=FALSE}
+##Number of Dead
+
+var<-c("location","parcela","Name")
+lnomda <- lapply(var, 
+                 function(s) {
+                   z<-table(INV$dead,INV[,s])
+                   data.frame(cbind(t(z),variablecomun=row.names(t(z))))
+                 })
+names(lnomda)<- var
+db.parcela<-unique(INV[c("state","Name","location","plotID","sizeplot","parcela","year","owner")])
+for (i in 1:length(lnomda)) { 
+  colnames(lnomda[[i]])[1:2]<-paste0(colnames(lnomda[[i]])[1:2],names(lnomda)[i])
+  colnames(lnomda[[i]])<-gsub("TRUE","Dead",colnames(lnomda[[i]]))
+  colnames(lnomda[[i]])<-gsub("FALSE","Alive",colnames(lnomda[[i]]))
+  db.parcela<-merge(db.parcela,lnomda[[i]],by.x=names(lnomda)[i], by.y ="variablecomun")
+}
+
+```
+
+```{r,echo=FALSE}
+sum(as.numeric(db.parcela$Dead.parcela))
+```
+
+### Total trees with DBH=NA 
+
+```{r,include=FALSE}
+##Number of DBH=NA
+
+l.mdb <- lapply(var,
+                function(s) data.frame(NA.DBH.=tapply(INV$DBH,INV[,s],
+                                   function(x) length(x[is.na(x)]))))
+
+
+lnomdb<-lapply(l.mdb,function(b) {
+  b$variablecomun<-row.names(b) 
+  return(b)
+  })
+
+names(lnomdb) <- var
+for (i in 1:length(lnomdb)) { 
+  colnames(lnomdb[[i]])[1]<-paste0(colnames(lnomdb[[i]])[1],names(lnomdb)[i])
+  db.parcela<-merge(db.parcela,lnomdb[[i]],by.x=names(lnomdb)[i], by.y ="variablecomun")
+}
+```
+
+```{r,echo=FALSE}
+sum(db.parcela$NA.DBH.parcela)
+```
+
+
+
+### Total lianas
+
+```{r,echo=FALSE}
+##Remove lianas,dead and DBH=NA
+
+INV$tree.type<-gsub("l","L",INV$tree.type)
+nrow(INV[INV$tree.type=='L',] )
+
+
+
+```
+
+```{r,include=FALSE}
+##Number of trees and palms
+
+
+lnomtp <- lapply(var, 
+                 function(s) {
+                   z<-table(INVagb$tree.type,INVagb[,s])
+                   data.frame(cbind(t(z),variablecomun=row.names(t(z))))
+                 })
+names(lnomtp)<- var
+for (i in 1:length(lnomtp)) { 
+  colnames(lnomtp[[i]])[1:2]<-paste0(colnames(lnomtp[[i]])[1:2],names(lnomtp)[i])
+  colnames(lnomtp[[i]])<-gsub("O","No.trees.",colnames(lnomtp[[i]]))
+  colnames(lnomtp[[i]])<-gsub("P","No.palms.",colnames(lnomtp[[i]]))
+  db.parcela<-merge(db.parcela,lnomtp[[i]],by.x=names(lnomtp)[i], by.y ="variablecomun")
+}
+str(db.parcela)
+db.parcela$No.trees.parcela<-as.numeric(db.parcela$No.trees.parcela)
+db.parcela$No.trees.Name<-as.numeric(db.parcela$No.trees.Name)
+db.parcela$No.trees.location<-as.numeric(db.parcela$No.trees.location)
+db.parcela$No.palms.parcela<-as.numeric(db.parcela$No.palms.parcela)
+db.parcela$No.palms.Name<-as.numeric(db.parcela$No.palms.Name)
+db.parcela$No.palms.location<-as.numeric(db.parcela$No.palms.location)
+```
+
+## Analyzed data {.tabset}
+
+
+### Total individuals
+
+```{r,echo=FALSE}
+nrow(INVagb)
+```
+
+### Total individuals by owner
+
+```{r,echo=FALSE}
+table(INVagb$owner)
+```
+
+### Total individuals by location
+
+```{r,echo=FALSE}
+table(INVagb$location)
+```
+
+### Total trees and palms
+
+```{r,echo=FALSE}
+table(INVagb$tree.type)
+```
+
+### Total individuals with DBH > 35
+
+```{r,echo=FALSE}
+data.frame(table(INVagb$DBH>=35))[2,2]
+```
+
+### Total individuals with DBH between 10 and 35
+
+```{r,echo=FALSE}
+data.frame(table(INVagb$DBH<35))[2,2]
+```
+
+### Total number of registered taxa
+```{r,echo=FALSE}
+data.frame(Families=nrow(table(INVagb$Accepted_family)),Genus=nrow(table(INVagb$genus.tnrs)),Species=nrow(table(INVagb$species.name)))
+```
+
+### Total plots
+
+```{r,include=FALSE}
+l.mdb <- lapply(var,
+                function(s) tapply(INVagb$DBH,INVagb[,s],
+                                   function(x) data.frame(mean(x),max(x),min(x))))
+l.dcb <- lapply(l.mdb,function(x) do.call(rbind,x))
+names(l.dcb) <- var
+lnomdb<-lapply(l.dcb,function(b) {b$variablecomun<-row.names(b); return(b)})
+for (i in 1:length(lnomdb)) { 
+  colnames(lnomdb[[i]])[1:3]<-paste0(colnames(lnomdb[[i]])[1:3],names(lnomdb)[i])
+  colnames(lnomdb[[i]])<-gsub("[.]x",".DBH",colnames(lnomdb[[i]]))
+  db.parcela<-merge(db.parcela,lnomdb[[i]],by.x=names(lnomdb)[i], by.y ="variablecomun")
+}
+```
+
+```{r,echo=FALSE}
+nrow(db.parcela)
+```
+
+### Plots by size
+
+```{r,echo=FALSE}
+table(db.parcela$sizeplot)
+
+```
+
+### Plots by owner
+
+```{r,echo=FALSE}
+table(db.parcela$owner)
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+table(db.parcela$location)
+```
+
+
+## Individuals DBH {.tabset}
+
+### Total individuals
+
+```{r,include=FALSE}
+h1<-hist(INVagb[INVagb$tree.type=="O",]$DBH,breaks=1:25*10,col="green",main="Trees inventories DBH")
+h2<-hist(INVagb[INVagb$tree.type=="P",]$DBH,breaks=1:25*10,col="red",main="Trees inventories DBH")
+
+```
+
+```{r,echo=FALSE}
+barplot(rbind(h1$counts,h2$counts),col=c("forestgreen","gold"),names.arg = c(0,1:23*10),cex.names = 1,las=2,xlab = "Mean DBH (cm)",ylab="Frequency",cex.axis = 0.8)
+legend("topright",c("Trees","Palms"),col=c("forestgreen","gold"),pch=c(15))
+
+```
+
+
+### Trees
+```{r,echo=FALSE}
+barplot(h1$counts,col="forestgreen",names.arg = c(0,1:23*10),cex.names = 1,las=2,xlab = "Mean DBH (cm)",ylab="Frequency",cex.axis = 0.8)
+
+
+
+```
+
+### Palms
+```{r,echo=FALSE}
+barplot(h2$counts,col="gold",names.arg = c(0,1:23*10),cex.names = 1,las=2,xlab = "Mean DBH (cm)",ylab="Frequency",cex.axis = 0.8)
+
+```
+
+## DBH by plots {.tabset}
+
+### Mean
+```{r,echo=FALSE}
+hist(db.parcela$mean.DBH.parcela,breaks=30,col="salmon",xlab="Mean plot DBH (cm)")
+```
+
+### Max
+```{r,echo=FALSE}
+hist(db.parcela$max.DBH.parcela,breaks=30,xlab="Max plot DBH (cm)",col="slateblue")
+
+```
+
+### Min
+```{r,echo=FALSE}
+hist(db.parcela$min.DBH.parcela,breaks=30,xlab="Min plot DBH (cm)",col="seagreen3")
+
+```
+
+
+
+
+
+## Individuals height {.tabset}
+```{r,include=FALSE}
+##Height min, max, mean
+
+l.mh <- lapply(var,
+               function(s) tapply(INVagb$height_wplog2,INVagb[,s],
+                                  function(x) data.frame(mean(x),max(x),min(x))))
+l.dch <- lapply(l.mh,function(x) do.call(rbind,x))
+names(l.dch) <- var
+lnomh<-lapply(l.dch,function(b) {b$variablecomun<-row.names(b); return(b)})
+for (i in 1:length(lnomh)) { 
+  colnames(lnomh[[i]])[1:3]<-paste0(colnames(lnomh[[i]])[1:3],names(lnomh)[i])
+  colnames(lnomh[[i]])<-gsub("[.]x",".Height",colnames(lnomh[[i]]))
+  db.parcela<-merge(db.parcela,lnomh[[i]],by.x=names(lnomh)[i], by.y ="variablecomun")
+}
+```
+
+### Total individuals
+
+```{r,include=FALSE}
+h3<-hist(INVagb[INVagb$tree.type=="O",]$height_wplog2,breaks=0:30*2,col="green",main="Trees inventories DBH")
+h4<-hist(INVagb[INVagb$tree.type=="P",]$height_wplog2,breaks=0:30*2,col="red",main="Trees inventories DBH")
+
+
+```
+
+```{r,echo=FALSE}
+barplot(rbind(h3$counts,h4$counts),col=c("forestgreen","gold"),names.arg =0:29*2,cex.names = 1,las=2,xlab = "Mean Height (m)",ylab="Frequency",cex.axis = 0.8)
+
+legend("topright",c("Trees","Palms"),col=c("forestgreen","gold"),pch=c(15))
+```
+
+
+### Trees
+
+```{r,echo=FALSE}
+hist(INVagb[INVagb$tree.type=="O",]$height_wplog2,breaks=30,main="Trees inventories Height",col="forestgreen")
+
+```
+
+### Palms
+
+```{r,echo=FALSE}
+hist(INVagb[INVagb$tree.type=="P",]$height_wplog2,breaks=30,main="Palms inventories Height",col="gold")
+
+```
+
+## Height by plots {.tabset}
+
+### Mean
+```{r,echo=FALSE}
+hist(db.parcela$mean.Height.parcela,breaks=30,xlab="Mean plot height (m)",col="salmon")
+
+```
+
+### Max
+```{r,echo=FALSE}
+hist(db.parcela$max.Height.parcela,breaks=30,xlab="Max plot height (m)",col="slateblue")
+
+```
+
+### Min
+```{r,echo=FALSE}
+hist(db.parcela$min.Height.parcela,breaks=30,xlab="Min plot height (m)",col="seagreen3")
+
+```
+
+## Individuals DBH vs Height 
+
+```{r,echo=FALSE}
+plot(INVagb[,c('DBH','height')], col = densCols(INVagb[,c('DBH','height')]), pch = 20,xlab="Individuals DBH (cm)",ylab="Individuals height (cm)")
+points(INVagb[INVagb$tree.type=='P',c('DBH','height')], pch = 20,
+     col = densCols(INVagb[INVagb$tree.type=='P',c('DBH','height')], 
+                    colramp = colorRampPalette(c('lightpink','red'))))
+abline(v=35, lty=2)
+legend("bottomright",c("trees","palms"),pch=c(20,20),col=c("lightblue","lightpink"))
+```
+
+## Wood density by plots {.tabset}
+
+```{r, include=FALSE}
+##wood density mean,max,min
+
+l.wd <- lapply(var,
+                function(s) tapply(INVagb$meanWD,INVagb[,s],
+                                   function(x) data.frame(mean(x),max(x),min(x))))
+l.wdcb <- lapply(l.wd,function(x) do.call(rbind,x))
+names(l.wdcb) <- var
+lnomwdcb<-lapply(l.dcb,function(b) {b$variablecomun<-row.names(b); return(b)})
+for (i in 1:length(lnomwdcb)) { 
+  colnames(lnomwdcb[[i]])[1:3]<-paste0(colnames(lnomwdcb[[i]])[1:3],names(lnomwdcb)[i])
+  colnames(lnomwdcb[[i]])<-gsub("[.]x",".WD",colnames(lnomwdcb[[i]]))
+  db.parcela<-merge(db.parcela,lnomwdcb[[i]],by.x=names(lnomwdcb)[i], by.y ="variablecomun")
+}
+```
+
+### Mean
+```{r,echo=FALSE}
+hist(db.parcela$mean.WD.parcela,breaks=30,xlab="Mean plot wood density (g/cm3)",col="salmon")
+```
+
+### Max
+```{r,echo=FALSE}
+hist(db.parcela$max.WD.parcela,breaks=30,xlab="Max plot wood density (g/cm3)",col="slateblue")
+```
+
+### Min
+```{r,echo=FALSE}
+hist(db.parcela$min.WD.parcela,breaks=30,xlab="Min plot wood density (g/cm3)",col="seagreen3")
+```
+
+## Number of taxa by plot {.tabset}
+
+```{r,include=FALSE}
+## Number of families
+
+l.fmm<-lapply(var, 
+       function(s)as.data.frame(t(data.frame(tapply(INVagb$Accepted_family,INVagb[,s],
+                          function(x)data.frame(nrow(data.frame(table(unique(cbind(x))[,1])))))))))
+
+names(l.fmm)<-c(var)
+
+row.names(l.fmm[[2]])<-gsub("[.]"," ",row.names(l.fmm[[2]]))
+
+for(i in 1:length(l.fmm)){
+  l.fmm[[i]]$variablecomun<-row.names(l.fmm[[i]]) 
+} 
+
+for (i in 1:length(l.fmm)) { 
+  colnames(l.fmm[[i]])[1]<-paste0(colnames(l.fmm[[i]])[1],names(l.fmm)[i])
+  colnames(l.fmm[[i]])<-gsub("V1","No.families.",colnames(l.fmm[[i]]))
+  db.parcela<-merge(db.parcela,l.fmm[[i]],by.x=names(l.fmm)[i], by.y ="variablecomun",all.x=T)
+}
+
+## Number of genus
+
+l.gmm<-lapply(var, 
+              function(s)as.data.frame(t(data.frame(tapply(INVagb$genus.tnrs,INVagb[,s],
+                                                           function(x)data.frame(nrow(data.frame(table(unique(cbind(x))[,1])))))))))
+
+names(l.gmm)<-c(var)
+
+row.names(l.gmm[[2]])<-gsub("[.]"," ",row.names(l.gmm[[2]]))
+
+for(i in 1:length(l.gmm)){
+  l.gmm[[i]]$variablecomun<-row.names(l.gmm[[i]]) 
+} 
+
+for (i in 1:length(l.gmm)) { 
+  colnames(l.gmm[[i]])[1]<-paste0(colnames(l.gmm[[i]])[1],names(l.gmm)[i])
+  colnames(l.gmm[[i]])<-gsub("V1","No.genus.",colnames(l.gmm[[i]]))
+  db.parcela<-merge(db.parcela,l.gmm[[i]],by.x=names(l.gmm)[i], by.y ="variablecomun",all.x = T)
+}
+
+## Number of species
+
+l.smm<-lapply(var, 
+              function(s)as.data.frame(t(data.frame(tapply(INVagb$species.name,INVagb[,s],
+                                                           function(x)data.frame(nrow(data.frame(table(unique(cbind(x))[,1])))))))))
+
+names(l.smm)<-c(var)
+
+row.names(l.smm[[2]])<-gsub("[.]"," ",row.names(l.smm[[2]]))
+
+for(i in 1:length(l.smm)){
+  l.smm[[i]]$variablecomun<-row.names(l.smm[[i]]) 
+} 
+
+for (i in 1:length(l.gmm)) { 
+  colnames(l.smm[[i]])[1]<-paste0(colnames(l.smm[[i]])[1],names(l.smm)[i])
+  colnames(l.smm[[i]])<-gsub("V1","No.species.",colnames(l.smm[[i]]))
+  db.parcela<-merge(db.parcela,l.smm[[i]],by.x=names(l.smm)[i], by.y ="variablecomun",all.x = T)
+}
+
+
+
+```
+
+
+### Families
+```{r,echo=FALSE}
+hist(db.parcela$No.families.parcela,breaks=30,xlab="Number of families by plot",col="salmon")
+```
+
+### Genus
+```{r,echo=FALSE}
+hist(db.parcela$No.genus.parcela,breaks=30,xlab="Number of genus by plot",col="slateblue")
+```
+
+### Species
+```{r,echo=FALSE}
+hist(db.parcela$No.species.parcela,breaks=30,xlab="Number of species by plot",col="seagreen3")
+```
+
+
+
+
+## AGB by plots {.tabset}
+
+```{r,include=FALSE}
+##biomas by parcela DBH > 35
+
+INVagb35<-INVagb[!(INVagb$DBH<35),]
+
+
+sum(INVagb35$AGB_wplog2,na.rm=T)
+
+a35<-tapply(INVagb35$AGB_wpfeld,INVagb35[,"parcela"],
+            function(x) sum(x))
+b35<-tapply(INVagb35$AGB_wpchav,INVagb35[,"parcela"],
+            function(x) sum(x))
+c35<-tapply(INVagb35$AGB_wpmich,INVagb35[,"parcela"],
+            function(x) sum(x))
+d35<-tapply(INVagb35$AGB_wpweib,INVagb35[,"parcela"],
+            function(x) sum(x))
+e35<-tapply(INVagb35$AGB_wplog2,INVagb35[,"parcela"],
+       function(x) sum(x))
+f35<-tapply(INVagb35$AGB_wplog1,INVagb35[,"parcela"],
+            function(x) sum(x))
+
+biomass35<-data.frame(parcela=row.names(b35),AGB.35.wpfeld=a35,AGB.35.wpchav=b35,AGB.35.wpmich=c35,AGB.35.wpweib=d35,AGB.35.wplog2=e35,AGB.35.wplog1=f35)
+
+db.parcela<-merge(db.parcela,biomass35,by="parcela",all.x = T)
+
+table(db.parcela$sizeplot)
+arp35<-data.frame(sizeplot=unique(db.parcela$sizeplot),areaplot35=c(2500,10000,1600,900))
+db.parcela<-merge(db.parcela,arp35,by="sizeplot",all.x=T)
+db.parcela$AGB.35.area.wpfeld<-db.parcela$AGB.35.wpfeld/db.parcela$areaplot35
+db.parcela$AGB.35.area.wpchav<-db.parcela$AGB.35.wpchav/db.parcela$areaplot35
+db.parcela$AGB.35.area.wpmich<-db.parcela$AGB.35.wpmich/db.parcela$areaplot35
+db.parcela$AGB.35.area.wpweib<-db.parcela$AGB.35.wpweib/db.parcela$areaplot35
+db.parcela$AGB.35.area.wplog2<-db.parcela$AGB.35.wplog2/db.parcela$areaplot35
+db.parcela$AGB.35.area.wplog1<-db.parcela$AGB.35.wplog1/db.parcela$areaplot35
+
+##biomas by parcela DBH 10:35
+
+INVagb10<-INVagb[!(INVagb$DBH>35),]
+
+
+sum(INVagb10$AGB_wplog2,na.rm=T)
+
+a10<-tapply(INVagb10$AGB_wpfeld,INVagb10[,"parcela"],
+            function(x) sum(x))
+b10<-tapply(INVagb10$AGB_wpchav,INVagb10[,"parcela"],
+            function(x) sum(x))
+c10<-tapply(INVagb10$AGB_wpmich,INVagb10[,"parcela"],
+            function(x) sum(x))
+d10<-tapply(INVagb10$AGB_wpweib,INVagb10[,"parcela"],
+            function(x) sum(x))
+e10<-tapply(INVagb10$AGB_wplog2,INVagb10[,"parcela"],
+            function(x) sum(x))
+f10<-tapply(INVagb10$AGB_wplog1,INVagb10[,"parcela"],
+            function(x) sum(x))
+
+biomass10<-data.frame(parcela=row.names(b10),AGB.10.wpfeld=a10,AGB.10.wpchav=b10,AGB.10.wpmich=c10,AGB.10.wpweib=d10,AGB.10.wplog2=e10,AGB.10.wplog1=f10)
+
+db.parcela<-merge(db.parcela,biomass10,by="parcela",all.x = T)
+
+db.parcela$locyear<-paste(db.parcela$location,db.parcela$year,db.parcela$sizeplot,sep=" ")
+table(db.parcela$locyear)
+arp10<-data.frame(locyear=unique(db.parcela$locyear),areaplot10=c(2500,2500,250,500,250,1000,1000,10000,2500,10000,10000,10000,10000,250,500,250,250,1000,250,250,250,10000,1600,900,250,500,1000,1000,1000,2500,10000))
+
+db.parcela<-merge(db.parcela,arp10,by="locyear",all.x=T)
+
+db.parcela$AGB.10.area.wpfeld<-db.parcela$AGB.10.wpfeld/db.parcela$areaplot10
+db.parcela$AGB.10.area.wpchav<-db.parcela$AGB.10.wpchav/db.parcela$areaplot10
+db.parcela$AGB.10.area.wpmich<-db.parcela$AGB.10.wpmich/db.parcela$areaplot10
+db.parcela$AGB.10.area.wpweib<-db.parcela$AGB.10.wpweib/db.parcela$areaplot10
+db.parcela$AGB.10.area.wplog2<-db.parcela$AGB.10.wplog2/db.parcela$areaplot10
+db.parcela$AGB.10.area.wplog1<-db.parcela$AGB.10.wplog1/db.parcela$areaplot10
+##total biomas
+
+db.parcela$totalbiomas.wpfeld<-db.parcela$AGB.10.wpfeld+db.parcela$AGB.35.wpfeld
+db.parcela$totalbiomas.wpchav<-db.parcela$AGB.10.wpchav+db.parcela$AGB.35.wpchav
+db.parcela$totalbiomas.wpmich<-db.parcela$AGB.10.wpmich+db.parcela$AGB.35.wpmich
+db.parcela$totalbiomas.wpweib<-db.parcela$AGB.10.wpweib+db.parcela$AGB.35.wpweib
+db.parcela$totalbiomas.wplog2<-db.parcela$AGB.10.wplog2+db.parcela$AGB.35.wplog2
+db.parcela$totalbiomas.wplog1<-db.parcela$AGB.10.wplog1+db.parcela$AGB.35.wplog1
+## total biomas per area
+
+db.parcela$totalbiomas.wpfeld.area<-(db.parcela$AGB.10.wpfeld+db.parcela$AGB.35.wpfeld)/db.parcela$areaplot35
+db.parcela$totalbiomas.wpchav.area<-(db.parcela$AGB.10.wpchav+db.parcela$AGB.35.wpchav)/db.parcela$areaplot35
+db.parcela$totalbiomas.wpmich.area<-(db.parcela$AGB.10.wpmich+db.parcela$AGB.35.wpmich)/db.parcela$areaplot35
+db.parcela$totalbiomas.wpweib.area<-(db.parcela$AGB.10.wpweib+db.parcela$AGB.35.wpweib)/db.parcela$areaplot35
+db.parcela$totalbiomas.wplog2.area<-(db.parcela$AGB.10.wplog2+db.parcela$AGB.35.wplog2)/db.parcela$areaplot35
+db.parcela$totalbiomas.wplog1.area<-(db.parcela$AGB.10.wplog1+db.parcela$AGB.35.wplog1)/db.parcela$areaplot35
+
+
+
+```
+
+### Total
+
+```{r,include=FALSE}
+h5<-hist(db.parcela$AGB.10.wplog2,breaks=0:40*10,main="AGB of DBH 10:35 by plots")
+h6<-hist(db.parcela$AGB.35.wplog2,breaks=0:40*10,main="AGB of DBH > 35 by plots")
+
+
+```
+
+```{r,echo=FALSE}
+barplot(rbind(h5$counts,h6$counts),col=c("chocolate4","orange"),names.arg =0:39*10,cex.names = 1,las=2,xlab = "AGB (Mg)",ylab="Frequency",cex.axis = 0.8)
+
+legend("topright",c("DBH 10:25","DBH > 35"),col=c("chocolate4","orange"),pch=c(15))
+```
+
+### DBH 10:35
+
+```{r,echo=FALSE}
+barplot(h5$counts,col="chocolate4",names.arg =0:39*10,cex.names = 1,las=2,xlab = "AGB (Mg)",ylab="Frequency",cex.axis = 0.8)
+```
+
+### DBH > 35
+
+```{r,echo=FALSE}
+barplot(h6$counts,col="orange",names.arg =0:39*10,cex.names = 1,las=2,xlab = "AGB (Mg)",ylab="Frequency",cex.axis = 0.8)
+```
+
+
+## AGB/area by plots {.tabset}
+
+### Total
+
+```{r,include=FALSE}
+h7<-hist(db.parcela$AGB.10.area.wplog2,breaks=0:30*0.005,main="AGB of DBH 10:35 by plots")
+h8<-hist(db.parcela$AGB.35.area.wplog2,breaks=0:30*0.005,main="AGB of DBH > 35 by plots")
+
+```
+
+
+```{r,echo=FALSE}
+barplot(rbind(h7$counts,h8$counts),col=c("chocolate4","orange"),names.arg =0:29*0.005,cex.names = 1,las=2,xlab = "AGB (Mg/m2)",ylab="Frequency",cex.axis = 0.8)
+
+legend("topright",c("DBH 10:25","DBH > 35"),col=c("chocolate4","orange"),pch=c(15))
+
+```
+
+
+### DBH 10:35
+
+```{r,echo=FALSE}
+barplot(h7$counts,col="chocolate4",names.arg =0:29*0.005,cex.names = 1,las=2,xlab = "AGB (Mg/m2)",ylab="Frequency",cex.axis = 0.8)
+
+```
+
+### DBH > 35
+
+```{r,echo=FALSE}
+barplot(h8$counts,col="orange",names.arg =0:29*0.005,cex.names = 1,las=2,xlab = "AGB (Mg/m2)",ylab="Frequency",cex.axis = 0.8)
+
+```
+
+
+
+## AGB by location {.tabset}
+
+### Total
+
+```{r,echo=FALSE}
+
+boxplot(db.parcela$totalbiomas.wplog2~db.parcela$location,ylab="AGB (Mg)",xlab=NULL,xaxt="n",col=rainbow(30))
+text(seq_along(unique(db.parcela$location)), par("usr")[3], 
+     labels = unique(db.parcela$location), srt = 45, adj = c(1.1, 1.1), xpd = TRUE,cex=0.8)
+
+```
+
+
+### DBH 10:35
+
+```{r,echo=FALSE}
+boxplot(db.parcela$AGB.10.wplog2~db.parcela$location,ylab="AGB (Mg)",xlab=NULL,xaxt="n",col=rainbow(30))
+text(seq_along(unique(db.parcela$location)), par("usr")[3], 
+     labels = unique(db.parcela$location), srt = 45, adj = c(1.1, 1.1), xpd = TRUE,cex=0.8)
+
+```
+
+### DBH > 35
+
+```{r,echo=FALSE}
+
+boxplot(db.parcela$AGB.35.wplog2~db.parcela$location,ylab="AGB (Mg)",xlab=NULL,xaxt="n",col=rainbow(30))
+text(seq_along(unique(db.parcela$location)), par("usr")[3], 
+     labels = unique(db.parcela$location), srt = 45, adj = c(1.1, 1.1), xpd = TRUE,cex=0.8)
+
+```
+
+
+## AGB/area by location {.tabset}
+
+### Total
+
+```{r,echo=FALSE}
+boxplot(db.parcela$totalbiomas.wplog2.area~db.parcela$location,ylab="AGB (Mg/m2)",xlab=NULL,xaxt="n",col=rainbow(30))
+text(seq_along(unique(db.parcela$location)), par("usr")[3], 
+     labels = unique(db.parcela$location), srt = 45, adj = c(1.1, 1.1), xpd = TRUE,cex=0.8)
+
+
+
+```
+
+
+### DBH 10:25
+
+```{r,echo=FALSE}
+boxplot(db.parcela$AGB.10.area.wplog2~db.parcela$location,ylab="AGB (Mg/m2)",xlab=NULL,xaxt="n",col=rainbow(30))
+text(seq_along(unique(db.parcela$location)), par("usr")[3], 
+     labels = unique(db.parcela$location), srt = 45, adj = c(1.1, 1.1), xpd = TRUE,cex=0.8)
+
+
+```
+
+### DBH > 35
+
+```{r,echo=FALSE}
+
+boxplot(db.parcela$AGB.35.area.wplog2~db.parcela$location,ylab="AGB (Mg/m2)",xlab=NULL,xaxt="n",col=rainbow(30))
+text(seq_along(unique(db.parcela$location)), par("usr")[3],      labels = unique(db.parcela$location), srt = 45, adj = c(1.1, 1.1), xpd = TRUE,cex=0.8)
+
+
+```
+
+
+## No.Individuals vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.trees.parcela,pch=20,col=densCols(db.parcela[,c('No.trees.parcela','totalbiomas.wplog2')]),xlab="Number of trees by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.trees.parcela,pch=20,col=NA,xlab="Number of trees by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.trees.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+
+```
+
+## No.Individuals/area vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+db.parcela$No.trees.parcela.area<-db.parcela$No.trees.parcela/db.parcela$areaplot35
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.trees.parcela.area,pch=20,col=densCols(db.parcela[,c('No.trees.parcela','totalbiomas.wplog2.area')]),xlab="Number of trees/m2 by plot",ylab="AGB (Mg/m2)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.trees.parcela.area,pch=20,col=NA,xlab="Number of trees/m2 by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.trees.parcela.area","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+
+## Mean DBH vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$mean.DBH.parcela,pch=20,col=densCols(db.parcela[,c('mean.DBH.parcela','totalbiomas.wplog2')]),xlab="Mean DBH (cm) by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$mean.DBH.parcela,pch=20,col=NA,xlab="Mean DBH (cm) by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("mean.DBH.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+## Mean DBH vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$mean.DBH.parcela,pch=20,col=densCols(db.parcela[,c('mean.DBH.parcela','totalbiomas.wplog2.area')]),xlab="Mean DBH (cm) by plot",ylab="AGB (Mg/m2)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$mean.DBH.parcela,pch=20,col=NA,xlab="Mean DBH (cm) by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("mean.DBH.parcela","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+
+## Mean height vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$mean.Height.parcela,pch=20,col=densCols(db.parcela[,c('mean.Height.parcela','totalbiomas.wplog2')]),xlab="Mean height (m) by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$mean.Height.parcela,pch=20,col=NA,xlab="Mean height (m) by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("mean.Height.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+## Mean height vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$mean.Height.parcela,pch=20,col=densCols(db.parcela[,c('mean.Height.parcela','totalbiomas.wplog2.area')]),xlab="Mean height (m) by plot",ylab="AGB (Mg/m2)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$mean.Height.parcela,pch=20,col=NA,xlab="Mean height (m) by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("mean.Height.parcela","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+
+## Wood density vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$mean.WD.parcela,pch=20,col=densCols(db.parcela[,c('mean.WD.parcela','totalbiomas.wplog2')]),xlab="Mean wood density (g/cm3) by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$mean.WD.parcela,pch=20,col=NA,xlab="Mean wood density (g/cm3) by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("mean.WD.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+
+```
+
+## Wood density vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$mean.WD.parcela,pch=20,col=densCols(db.parcela[,c('mean.WD.parcela','totalbiomas.wplog2.area')]),xlab="Mean wood density (g/cm3) by plot",ylab="AGB (Mg/m2)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$mean.WD.parcela,pch=20,col=NA,xlab="Mean wood density (g/cm3) by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("mean.WD.parcela","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+
+## No. families vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.families.parcela,pch=20,col=densCols(db.parcela[,c('No.families.parcela','totalbiomas.wplog2')]),xlab="Number of families by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.families.parcela,pch=20,col=NA,xlab="Number of families by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.families.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+## No. families/area vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+db.parcela$No.families.parcela.area<-db.parcela$No.families.parcela/db.parcela$areaplot35
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.families.parcela.area,pch=20,col=densCols(db.parcela[,c('No.families.parcela.area','totalbiomas.wplog2.area')]),xlab="Number of families/m2 by plot",ylab="AGB (Mg/m2)")
+
+```
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.families.parcela.area,pch=20,col=NA,xlab="Number of families/m2 by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.families.parcela.area","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
+
+
+## No. genus vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.genus.parcela,pch=20,col=densCols(db.parcela[,c('No.genus.parcela','totalbiomas.wplog2')]),xlab="Number of genus by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.genus.parcela,pch=20,col=NA,xlab="Number of genus by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.genus.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+
+```
+
+## No. genus/area vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+db.parcela$No.genus.parcela.area<-db.parcela$No.genus.parcela/db.parcela$areaplot35
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.genus.parcela.area,pch=20,col=densCols(db.parcela[,c('No.genus.parcela.area','totalbiomas.wplog2.area')]),xlab="Number of genus/m2 by plot",ylab="AGB (Mg/m2)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.genus.parcela.area,pch=20,col=NA,xlab="Number of genus/m2 by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.genus.parcela.area","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+
+```
+
+
+## No. species vs AGB {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.species.parcela,pch=20,col=densCols(db.parcela[,c('No.species.parcela','totalbiomas.wplog2')]),xlab="Number of species by plot",ylab="AGB (Mg)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2~db.parcela$No.species.parcela,pch=20,col=NA,xlab="Number of species by plot",ylab="AGB (Mg)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.species.parcela","totalbiomas.wplog2")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+
+```
+
+
+## No. species/area vs AGB/area {.tabset}
+
+### Total plots
+
+```{r,echo=FALSE}
+db.parcela$No.species.parcela.area<-db.parcela$No.species.parcela/db.parcela$areaplot35
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.species.parcela.area,pch=20,col=densCols(db.parcela[,c('No.species.parcela.area','totalbiomas.wplog2.area')]),xlab="Number of species/m2 by plot",ylab="AGB (Mg/m2)")
+
+```
+
+
+### Plots by location
+
+```{r,echo=FALSE}
+par(mar = c(5, 4, 4, 8),                                  
+    xpd = TRUE)
+
+plot(db.parcela$totalbiomas.wplog2.area~db.parcela$No.species.parcela.area,pch=20,col=NA,xlab="Number of species/m2 by plot",ylab="AGB (Mg/m2)")
+
+for(i in 1:25){
+  points(db.parcela[db.parcela$location==unique(db.parcela$location)[i],c("No.species.parcela.area","totalbiomas.wplog2.area")],pch=20,col=rainbow(n=25)[i])
+}
+legend("topright",inset=c(-0.3,0),c(unique(db.parcela$location)),pch=c(20),col=c(rainbow(n=25)),cex=0.6)
+```
